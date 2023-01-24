@@ -8,19 +8,49 @@ org $8000
 
 read_buf: equ $9000
 write_buf: equ $9010
+calc_buf: equ $9020
 
 main:
-	call read_encode_number		
-	; call read_char_display_char	; Read number
+	call init_buf
+	main_loop:
+		ld de, write_buf
+		call clear_buf
+		call read_encode_number		
+		call add_numbers
+		ld de, calc_buf		; Set output
+		ld b, $4		; Set temp length
+		call bcd_display
+		call new_line
+		jp main_loop
 ret
 
+; Init all buff memory
+init_buf:
+	ld de, read_buf
+	call clear_buf
+	ld de, write_buf
+	call clear_buf
+	ld de, calc_buf
+	call clear_buf
+ret
+
+; Clear buf memory
+clear_buf:
+	push bc
+		ld b, $0f
+		inc b
+		clear_buf_loop:
+			ld a, $0
+			ld (de), a
+			inc de
+			djnz clear_buf_loop
+	pop bc
+ret
 
 read_encode_number:
 	call read_line		; Read line in buffer
-	; call disp_line		; Display line in memory
 	call encode_bcd		; Encode ASCII number number to BCD
 	call pack_bcd		; Pack BCD
-	call bcd_display 	; Display BCD as ASCII
 ret
 
 ; SCM Specific Imp read_line
@@ -34,16 +64,12 @@ read_line:
 	rst $30			; Call API
 ret
 
-disp_line:
-	push de
-	push af
-		; ld c, $07		; Function 7 = New Line
-		; rst $30			; Call API
-		; ld de, read_buf		; Start of line $9000
-		ld c, $06		; Function 6 = Display line
+new_line:
+	push bc
+		ld c, $07		; Function 7 = New Line
 		rst $30			; Call API
-	pop af
-	pop de
+	pop bc
+ret
 
 ; Print individual char to display
 ; Input a -> ascii char
@@ -188,4 +214,28 @@ asc_bcd:
 	ld a,(hl)	; get char
 	and $0F		; mash high nibble
 	ld (hl),a	; write char
+ret
+
+; Set-up addition of write_buf and calc_buf
+add_numbers:
+	ld de, calc_buf
+	ld hl, write_buf
+	ld b, $0f
+	call bcd_add
+ret
+
+; Add Packed BCD val at HL to Packed BCD val at DE
+; input hl -> packed BCD val
+; input de -> packed BCD val
+; input b -> bytes length
+bcd_add:
+	or a
+bcd_add_loop:
+	ld a, (de)
+	adc a,(hl) ; check
+	daa
+	ld (de), a
+	inc de
+	inc hl
+	djnz bcd_add_loop
 ret
