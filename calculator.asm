@@ -7,6 +7,7 @@
 org $8000
 
 read_buf: equ $9000
+write_buf: equ $9010
 
 main:
 	call read_encode_number		
@@ -16,10 +17,10 @@ ret
 
 read_encode_number:
 	call read_line		; Read line in buffer
-	call disp_line		; Display line in memory
+	; call disp_line		; Display line in memory
 	call encode_bcd		; Encode ASCII number number to BCD
 	call pack_bcd		; Pack BCD
-	; call bcd_display 	; Display BCD as ASCII
+	call bcd_display 	; Display BCD as ASCII
 ret
 
 ; SCM Specific Imp read_line
@@ -48,11 +49,20 @@ disp_line:
 ; Input a -> ascii char
 ; Output a -> ascii char
 print_char:
-	ld c, $02		; Print individual char
-	rst $30			; Call API
+	push af
+	push bc
+	push de
+		ld c, $02		; Print individual char
+		rst $30			; Call API
+	pop de
+	pop bc
+	pop af
 ret
 
-; moves de by b bytes
+; input de - address for packed bytes
+; input hl - address for packed bytes
+; input b - end bytes
+; moves de, hl by b bytes
 bcd_get_end:
 	push bc
 		ld c,b
@@ -60,12 +70,13 @@ bcd_get_end:
 		ld b,0
 		add hl,bc
 		ex de,hl
-		add hl,de
 		add hl,bc
 		ex de,hl
 	pop bc
 ret
 
+; input de - address for packed bytes
+; input b - number of bytes
 bcd_display:
 	call bcd_get_end
 bcd_show_direct:
@@ -118,47 +129,55 @@ ret
 ; BCD
 ; input DE = start of memory
 ; input A = number of bytes
+; output de = start of memory
+; output b = number of bytes
 pack_bcd:
-	ex de, hl	; Switch to operate on hl
-	ld b, 0
-	ld c, a
-	add hl, bc	; Move to end
-	dec hl
+	push af			; Keep
 
-	ld b, a		; Count down for bytes
-	; inc b
-
-	ld de, $9010    ; Set location for write
-
-	pack_bcd_loop:
-	
-		; Read first byte
-		ld c, (hl)
+		ex de, hl		; Switch to operate on hl
+		ld b, 0
+		ld c, a
+		add hl, bc		; Move to end
 		dec hl
 
-		; Read second byte, add
-		ld a, (hl)
-		rrca
-		rrca
-		rrca
-		rrca
-		add a, c
-		dec hl
+		ld b, a			; Count down for bytes
 
-		ld (de), a
-		inc de
+		ld de, write_buf	; Set write buf
 
-		dec b
-		jr z, exit_loop
+		pack_bcd_loop:
+		
+			; Read first byte
+			ld c, (hl)
+			dec hl
 
-		dec b
-		jr z, exit_loop
+			; Read second byte, add
+			ld a, (hl)
+			rrca
+			rrca
+			rrca
+			rrca
+			add a, c
+			dec hl
 
-		jr pack_bcd_loop
-	
-	exit_loop:
-		nop
+			ld (de), a
+			inc de
 
+			dec b
+			jr z, exit_loop
+
+			dec b
+			jr z, exit_loop
+
+			jr pack_bcd_loop
+		
+		exit_loop:
+			nop
+
+		ld de, write_buf	
+
+	pop af		; Restore
+	ld b, a		; Set number of bytes - we want half of this
+	sra b		; div 2
 ret
 
 ; Convert ascii to BCD
