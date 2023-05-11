@@ -1,47 +1,33 @@
 
 org $8000
 
+main:
+
 	call clear_sid
 
-	nop
-	nop
-	nop
-
 	ld a, 0x18 ; Set volume
-	ld d, 0x0E ; Set data
-	ld e, 0x20 ; Set interrupt mode
+	ld d, 0x33 ; Set data
+	ld e, 0x00 ; Set interrupt mode
 	call sid_io
 
-	nop
-	nop
-	nop
-
-	ld a, 0x01 ; Set high freq
-	ld d, 0x10 ; Set data
+	ld a, 0x05 ; Set env
+	ld d, 0x00 ; Attack/delay
 	call sid_io
 
-	nop
-	nop
-	nop
+	ld a, 0x06 ; Set env
+	ld d, 0xF0 ; Sustain/release
+	call sid_io
+
+	ld a, 0x04 ; Set waveform
+	ld d, 0x11 ; Set data
+	call sid_io
 
 	ld a, 0x00 ; Set low freq
 	ld d, 0x10 ; Set data
 	call sid_io
 
-	nop
-	nop
-	nop
-
-	ld a, 0x05 ; Set env
-	ld d, 0x0C ; Attack/delay
-	call sid_io
-
-	nop
-	nop
-	nop
-
-	ld a, 0x04 ; Set waveform
-	ld d, 0x21
+	ld a, 0x01 ; Set high freq
+	ld d, 0x10 ; Set data
 	call sid_io
 
 	ret
