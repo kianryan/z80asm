@@ -5,50 +5,62 @@ main:
 
 	call clear_sid
 
+	ld a, 0x04 ; Set waveform
+	ld d, 0x00 ; Set data
+	call sid_io
+
 	ld a, 0x18 ; Set volume
-	ld d, 0x33 ; Set data
+	ld d, 0x0F ; Set data
 	ld e, 0x00 ; Set interrupt mode
 	call sid_io
 
-	ld a, 0x05 ; Set env
+	ld a, 0x0C ; Set env
 	ld d, 0x00 ; Attack/delay
 	call sid_io
 
-	ld a, 0x06 ; Set env
+	ld a, 0x0D ; Set env
 	ld d, 0xF0 ; Sustain/release
 	call sid_io
 
-	ld a, 0x04 ; Set waveform
+	ld a, 0x0B ; Set waveform
 	ld d, 0x11 ; Set data
 	call sid_io
 
-	ld a, 0x00 ; Set low freq
+	ld a, 0x07 ; Set low freq
 	ld d, 0x10 ; Set data
 	call sid_io
 
-	ld a, 0x01 ; Set high freq
+	ld a, 0x08 ; Set high freq
 	ld d, 0x10 ; Set data
 	call sid_io
 
 	ret
 
-clear_sid: 
-	LD C,0x54 ; BASE I/O ADDRESS
-	LD B,0x98 ; SID REGISER 0x18, /CS=1 (BIT 7)
-	; INTERRUPT CONTROLLER OFF
-	XOR A ; OPTIMISED “LD A,0” (VOLUME 0)
-	OUT (C),A ; FIRST OUT TO ENSURE /CS HIGH
-	NOP
-	NOP ; DELAY
-	NOP
-	RES 7,B ; /CS=0 (B BIT 7)
-	OUT (C),A ; WRITE TO SID
-	NOP
-	NOP ; DELAY
-	NOP
-	SET 7,B ; /CS=1 (B BIT 7)
-	OUT (C),A ; WRITE TO SID
-	RET
+clear_sid:	   ; Updated clear_sid from Quazar
+	xor a
+	ld b, a
+	ld d, a
+	ld c, 0x54 ; base addr
+	set 7, b
+	out (c), d
+	nop
+	nop
+
+clear_loop:
+	res 7, b
+	out (c), d
+	nop
+	nop
+	nop
+	set 7, b
+	out (c), d
+
+	inc b
+	inc a
+	cp 25
+	jr nz, clear_loop
+	ret
+
 
 ; ENTER WITH: A = SID REGISTER (0x00 - 0x18)
 ; D = DATA BYTE
